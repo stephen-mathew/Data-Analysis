@@ -357,7 +357,7 @@ cum_totals_2024_2 = (
 
 import matplotlib.pyplot as plt
 
-# Create scatter plot using Matplotlib
+# Create line plot using Matplotlib
 plt.plot(cum_totals_2024_2['over'], cum_totals_2024_2['total_runs'])
 
 # Add labels and title for clarity
