@@ -1,3 +1,18 @@
+# Project Author: Stephen Mathew
+# stephen-mathew.github.io
+
+# Exploratory Data Analysis (EDA) is a crucial step in 
+# the data analysis process that involves examining
+#  and visualizing datasets to understand their 
+# main characteristics. 
+# The primary goals of EDA include 
+# identifying patterns, 
+# spotting anomalies, 
+# testing hypotheses, and 
+# generating insights 
+# before applying more advanced analytical techniques.
+
+
 ### Numpy
 import numpy as np
 
@@ -23,6 +38,9 @@ np.info(arr), np.info(arr2), np.info(arr3)
 ## Indexing
 arr2
 arr2[1]
+arr2[1][[1,2]]
+arr2[1,[1,2]]
+arr2[1][::-1]
 
 arr3
 arr3[[1,3,4]]
@@ -32,6 +50,9 @@ arr3[arr3 % 6 == 0]
 arr3
 arr3[arr3 % 6 == 0] = 0
 arr3
+
+arr2[1,arr2[1] % 2 == 0]
+arr2[1][arr2[1] % 2 == 0]
 
 ### Pandas
 import pandas as pd
@@ -68,10 +89,10 @@ df2024.info()
 df2022.dtypes
 
 (
-	df2022
-	.memory_usage(deep=True)
-	.sum()
-)
+    df2022
+    .memory_usage(deep=True)
+    .sum() / (1024 * 1024)
+).round(2).astype(str) + " MB"
 
 (
 	df2022
@@ -86,11 +107,14 @@ df2022.dtypes
 )
 
 (
+	(
 	df2022
 	.astype({'venue':'category'})
 	# .dtypes
 	.memory_usage(deep=True)
-	.sum()
+	.sum() / (1024 * 1024)
+	)
+	.round(2).astype(str) + " MB"
 )
 
 ## Chaining
@@ -116,8 +140,8 @@ df2022.dtypes
 (
 	df2024
 	.set_index('date')
-	# .loc['2024-06-01 00:00:00']
-	# .iloc[0:20:,]
+	.loc['2024-06-04 00:00:00']
+	# .iloc[850:870:,]
 )
 
 ## Filtering using loc or query
@@ -125,12 +149,15 @@ cols_to_keep = [col for col in df.columns if col != 'match_id']
 
 (
 	df2024
-	.loc[(df2024['phase']== 'Group B')& (df2024['striker'].str.contains('warner', case=False)),cols_to_keep]
+	.loc[(df2024['phase']== 'Group B')& (df2024['striker']
+			.str.contains('warner', case=False)),cols_to_keep]
 )
 (
 	df2024
-	.query("striker.str.contains('warner', case=False) and phase == 'Group B'")[cols_to_keep]
+	.query("striker.str
+		.contains('warner', case=False) and phase == 'Group B'")[cols_to_keep]
 )
+
 
 ## Simple group by, pivot and unstack
 (
@@ -141,7 +168,16 @@ cols_to_keep = [col for col in df.columns if col != 'match_id']
 )
 (
 	df2024
-	.pivot_table(columns=['match_id','innings'], values='runs_of_bat', aggfunc='sum')
+	.pivot_table(columns=['match_id','innings'], 
+			  values='runs_of_bat', aggfunc='sum')
+	# .melt()
+	# .stack()
+	# .transpose()
+)
+
+(
+	df2024
+	.query("innings in [3,4]")
 )
 
 ## Sorting
@@ -186,32 +222,70 @@ team_runs_2024 = (
 	.fillna(0) 					
 )
 
-## Group by, Assign, Lambda function, Rename, Concat, Axis, Pipe, Series, Dataframe, Map
+## Group by, Assign, Lambda function, Rename, Concat, Axis, Pipe, Map
 # Function to process a DataFrame
 def process_df(df):
     return (
         df.rename(columns={'over': 'Over Ball'})
-        .assign(over=lambda x: x['Over Ball'].apply(lambda y: int(str(y).split('.')[0])+1),
-                ball=lambda x: x['Over Ball'].apply(lambda y: int(str(y).split('.')[1])))
+        .assign(over=lambda x: x['Over Ball']
+				.apply(lambda y: int(str(y).split('.')[0])+1),
+                ball=lambda x: x['Over Ball']
+				.apply(lambda y: int(str(y).split('.')[1])))
         .groupby(['match_id','over'])[['runs_of_bat', 'extras']]
         # .agg(['sum', 'mean'])
 		.agg('sum')
 		.reset_index()
-		.groupby(['over'])[['runs_of_bat', 'extras','extras']].agg({
+		.groupby(['over'])[['runs_of_bat', 'extras','extras']]
+		.agg({
 		   'runs_of_bat': ['mean'],
     		'extras': ['mean', 'sum']
 		})
     ).map(lambda x: round(x) if isinstance(x, float) else x)
 
-
+(
+	df2024.rename(columns={'over': 'Over Ball'})
+        .assign(over=lambda x: x['Over Ball']
+				.apply(lambda y: int(str(y).split('.')[0])+1),
+                ball=lambda x: x['Over Ball']
+				.apply(lambda y: int(str(y).split('.')[1])))
+		# .loc[:,['Over Ball','over','ball']]
+		# .head()
+		# .groupby(['match_id','over'])[['runs_of_bat', 'extras']]
+		# .agg('sum')
+		# .reset_index()
+)
 # Process both DataFrames
 result_2022 = process_df(df2022)
 result_2024 = process_df(df2024)
 
 # Merge results for comparison
-comparison_result = pd.concat([result_2022.add_suffix('_2022'), result_2024.add_suffix('_2024')], axis=1)
+comparison_result = pd.concat([result_2022.add_suffix('_2022'), 
+							   result_2024.add_suffix('_2024')]
+							   , axis=1)
 
-## loc and iloc
+## Apply vs Map
+dftest = pd.DataFrame({
+    'A': [1.23, 2.1, 3.232],
+    'B': [4.2, 5.43, 6.76]
+})
+
+(
+	dftest
+	.map(lambda element: round(element) 
+		 if isinstance(element, float) else element)
+)
+(
+	dftest
+	.apply(lambda element: round(element) 
+		 if isinstance(element, float) else element)
+)
+(
+	dftest
+	.apply(lambda row: pd.Series([round(x) if isinstance(x, float) 
+							   else x for x in row]), axis=1)
+)
+
+## DataFrame and Series
 (
 	comparison_result
 	.reset_index()
@@ -219,7 +293,7 @@ comparison_result = pd.concat([result_2022.add_suffix('_2022'), result_2024.add_
 	.iloc[0:5:,[0,1]]
 	# .iloc[0:5:,0] # Dataframe
 	# .iloc[0:5:,[0]]. # Series
-	# .pipe(lambda x: (print(f"Type: {type(x)}"), x)[1]) #prints type
+	.pipe(lambda x: (print(f"Type: {type(x)}"), x)[1]) #prints type
 	# .columns
 )
 (
@@ -303,21 +377,66 @@ merged_total_runs_compare = (
 
 (
     merged_total_runs_compare.style.apply(
-        lambda row: ['background-color: green'] * len(row) if row['runs_of_bat_2022'] < row['runs_of_bat_2024'] else ['background-color: yellow'] * len(row),
+        lambda row: ['background-color: green'] * len(row) 
+		if row['runs_of_bat_2022'] < row['runs_of_bat_2024'] 
+		else ['background-color: yellow'] * len(row),
         axis=1
     )
 )
 
-## TODO Connecting to a database with Pandas
+## Connecting to a database with Pandas
+# !pip install psycopg2-binary pandas
 
+import psycopg2
+import pandas as pd
+
+# Connection parameters
+host = 'localhost'
+dbname = 'your_database_name'
+user = 'your_username'
+password = 'your_password'
+port = 5432
+
+# Establish a connection
+conn = psycopg2.connect(
+    host=host,
+    dbname=dbname,
+    user=user,
+    password=password,
+    port=port
+)
+
+# Create a cursor object
+cur = conn.cursor()
+
+# SQL query to fetch data
+sql_query = "SELECT * FROM your_table_name"
+
+# Execute the SQL query
+cur.execute(sql_query)
+
+# Fetch all rows from the query
+rows = cur.fetchall()
+
+# Get column names
+columns = [desc[0] for desc in cur.description]
+
+# Load data into a DataFrame
+df = pd.DataFrame(rows, columns=columns)
+
+# Close the cursor and connection
+cur.close()
+conn.close()
+
+print(df)
 
 ## Pandas 2.0
 # !pip install pyarrow
 # !pip install --upgrade pyarrow
 # !pip show pyarrow
 
-import pandas as pd
-import glob
+# import pandas as pd
+# import glob
 
 csv_files_2 = glob.glob('t20*.csv')
 dfs_2 = []
@@ -372,3 +491,33 @@ plt.xticks(custom_ticks)
 
 # Display the plot
 plt.show()
+
+### Other packages such as Polars and DuckDB and PySpark
+
+### Pandas profiling
+!pip install -U ydata-profiling
+
+from ydata_profiling import ProfileReport
+import pandas as pd
+import glob
+
+csv_files = glob.glob('t20*.csv')
+dfs = []
+for file in csv_files:
+	df = pd.read_csv(file)
+	df['date'] = pd.to_datetime(df['date'], format='%b %d, %Y')
+	dfs.append(df)
+
+if dfs[0]["match_id"][0] == '202201':
+	df2022, df2024 = dfs
+else:
+	df2024, df2022 = dfs
+
+# Generate the profile report
+profile = ProfileReport(df2024)
+
+# Save the report to an HTML file
+profile.to_file("output_report.html")
+
+# Display the report in a Jupyter Notebook (if applicable)
+profile.to_notebook_iframe()
